@@ -1,7 +1,7 @@
 # Support Annotations库介绍
 
 ### 0. 引子
-从Android Support Library v19.1开始，Support库新增了一个annotations库，里面定义了一些annotation。这些annotation可以被用于在代码中强制添加一些调用约束，进而便于IDE对代码进行静态检查，以发现潜在的问题。
+从Android Support Library v19.1开始，Support库新增了一个annotations子库，里面定义了一些annotation。这些annotation可以被用于在代码中强制添加一些调用约束，进而便于IDE对代码进行静态检查，以发现潜在的问题。
 
 关于该库的官方介绍和用法，请看 [这里](http://tools.android.com/tech-docs/support-annotations).
 
@@ -109,7 +109,7 @@ public abstract class ActionBar {
 ```
 
 ##### @StringDef
-字符串常量，跟前面的int常量类似。
+该annotation用于修饰字符串常量，用法跟前面的@IntDef类似。
 
 ### 3. 结语
-在项目中支持这些annotation是比较繁琐的，就像为项目添加单元测试的支持一样。但同样的，如果能够在项中支持这些annotation，其带来的质量提升是很明显的。特别是对于library project项目，建议在代码规范予以支持。
+在项目中支持这些annotation是比较繁琐的，就像为项目添加单元测试的支持一样。但同样的，如果能够在项目中支持这些annotation，其带来的质量提升是很明显的。特别是对于library project项目，建议在代码规范予以支持。
