@@ -3,7 +3,7 @@
 在看Android Framework源码时发现的一小段有意思的代码，涉及到几个有意思的知识点。
 
 代码整理如下（来自类com.android.internal.os.BinderInternal）：
-```
+```java
 public class GcWatcher {
     static WeakReference<GcWatcher> mGcWatcher
             = new WeakReference<GcWatcher>(new GcWatcher());

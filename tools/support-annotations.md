@@ -26,7 +26,7 @@ dependencies {
 * @NonNull 表示不允许为null
 
 从官网抄一段例子：
-```
+```java
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 ...
@@ -65,7 +65,7 @@ import android.support.annotation.Nullable;
 * @XmlRes
 
 从官网抄一段例子：
-```
+```java
 import android.support.annotation.StringRes;
 ...
     public abstract void setTitle(@StringRes int resId);
@@ -76,7 +76,7 @@ import android.support.annotation.StringRes;
 我们经常使用int来定义一些常量来代替使用enum，可以使用这个annotation来添加相关的约束。
 
 还是搬官网的例子：
-```
+```java
 import android.support.annotation.IntDef;
 ...
 public abstract class ActionBar {
@@ -96,7 +96,7 @@ public abstract class ActionBar {
 ```
 
 再搬一个例子，关于flags类型(可进行异或运算)的常量定义：
-```
+```java
     @IntDef(flag=true, value={
             DISPLAY_USE_LOGO,
             DISPLAY_SHOW_HOME,
