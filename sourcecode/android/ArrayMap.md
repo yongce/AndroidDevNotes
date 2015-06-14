@@ -32,7 +32,7 @@ ArrayMap内部使用两个数组来存储“key/value”数据和实现Mapping:
 
 默认创建的ArrayMap对象（不指定capacity），内部创建的数组大小为0。
 
-```
+```java
 public ArrayMap() {
     mHashes = EmptyArray.INT;
     mArray = EmptyArray.OBJECT;
@@ -44,7 +44,7 @@ public ArrayMap() {
 
 在put时，如果数组中已经没有可用空间时，则需要重新分配更大的数组。其增长策略为：如果当前ArrayMap大小小于BASE_SIZE（当前实现设定为4），则分配一个大小为BASE_SIZE的数组；否则，如果ArrayMap大小小于BASE_SIZE\*2，则分配一个大小为BASE_SIZE\*2的数组；否则，分配一个大小为当前ArrayMap大小1.5倍的数组。
 
-```
+```java
 if (mSize >= mHashes.length) {
     final int n = mSize >= (BASE_SIZE*2) ? (mSize+(mSize>>1))
             : (mSize >= BASE_SIZE ? (BASE_SIZE*2) : BASE_SIZE);
@@ -69,7 +69,7 @@ if (mSize >= mHashes.length) {
 
 在remove时，如果数组大小大于BASE_SIZE\*2，且ArrayMap大小小于1/3数组大小，那么会对数组进行收缩。其收缩策略为：如果当前ArrayMap大小大于BASE_SIZE\*2，那么新的数组大小为ArrayMap大小的1.5倍；否则，新的数组大小为BASE_SIZE*2。
 
-```
+```java
 if (mHashes.length > (BASE_SIZE*2) && mSize < mHashes.length/3) {
     // Shrunk enough to reduce size of arrays.  We don't allow it to
     // shrink smaller than (BASE_SIZE*2) to avoid flapping between
@@ -110,7 +110,7 @@ if (mHashes.length > (BASE_SIZE*2) && mSize < mHashes.length/3) {
 
 在使用过程中，ArrayMap可能需要多次分配内部的数组。为了避免频繁GC，ArrayMap类对释放的数组做了缓存，以便重复利用。
 
-```
+```java
 /**
  * Caches of small array objects to avoid spamming garbage.  The cache
  * Object[] variable is a pointer to a linked list of array objects.
@@ -127,7 +127,7 @@ static int mTwiceBaseCacheSize;
 
 分配数组时使用缓存的代码：
 
-```
+```java
 if (mBaseCache != null) {
     final Object[] array = mBaseCache;
     mArray = array;
@@ -143,7 +143,7 @@ if (mBaseCache != null) {
 
 释放数组时加入缓存的代码：
 
-```
+```java
 if (mBaseCacheSize < CACHE_SIZE) {
     array[0] = mBaseCache;
     array[1] = hashes;
