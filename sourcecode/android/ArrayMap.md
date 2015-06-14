@@ -1,0 +1,162 @@
+# ArrayMap
+
+## 源码信息
+
+```
+AOSP Project: frameworks/base
+Project Tag: android-5.1.1_r4
+Files:
++ core/java/android/util/ArrayMap.java
+```
+
+## 设计目的
+
+ArrayMap是一个用于存储“key/value”的数据结构，用于在某些场景下代替HashMap。相比HashMap，ArrayMap更加节省内存（使用数组的连续空间存储），但在速度上有所牺牲（使用二分查找，需要多次分配内存）。在存储的元素个数不多时，速度上的差距不太明显。
+
+为了节省内存，当存储的元素个数变少时，ArrayMap可能会重新分配更小的数组来存储元素，从而进行内存收缩。
+
+## 实现原理
+
+ArrayMap内部使用两个数组来存储“key/value”数据和实现Mapping:
+
++ 一个int数组用于存储key的hash code，并且保持有序
++ 一个Object数组用于存储key/value对，与int数组的下标保持对应关系
+
+当需要查找一个元素时，先计算key的hash code，然后在int数组中二分查找该key的hash code，从而找到该key在int数组中的下标index；此时，在Object数组中，key的下标为(index\*2)，value的下标为(index\*2+1)。
+
+## 实现细节
+
+### 数组大小控制策略
+
+#### 创建
+
+默认创建的ArrayMap对象（不指定capacity），内部创建的数组大小为0。
+
+```
+public ArrayMap() {
+    mHashes = EmptyArray.INT;
+    mArray = EmptyArray.OBJECT;
+    mSize = 0;
+}
+```
+
+#### 增长
+
+在put时，如果数组中已经没有可用空间时，则需要重新分配更大的数组。其增长策略为：如果当前ArrayMap大小小于BASE_SIZE（当前实现设定为4），则分配一个大小为BASE_SIZE的数组；否则，如果ArrayMap大小小于BASE_SIZE\*2，则分配一个大小为BASE_SIZE\*2的数组；否则，分配一个大小为当前ArrayMap大小1.5倍的数组。
+
+```
+if (mSize >= mHashes.length) {
+    final int n = mSize >= (BASE_SIZE*2) ? (mSize+(mSize>>1))
+            : (mSize >= BASE_SIZE ? (BASE_SIZE*2) : BASE_SIZE);
+
+    if (DEBUG) Log.d(TAG, "put: grow from " + mHashes.length + " to " + n);
+
+    final int[] ohashes = mHashes;
+    final Object[] oarray = mArray;
+    allocArrays(n);
+
+    if (mHashes.length > 0) {
+        if (DEBUG) Log.d(TAG, "put: copy 0-" + mSize + " to 0");
+        System.arraycopy(ohashes, 0, mHashes, 0, ohashes.length);
+        System.arraycopy(oarray, 0, mArray, 0, oarray.length);
+    }
+
+    freeArrays(ohashes, oarray, mSize);
+}
+```
+
+#### 收缩
+
+在remove时，如果数组大小大于BASE_SIZE\*2，且ArrayMap大小小于1/3数组大小，那么会对数组进行收缩。其收缩策略为：如果当前ArrayMap大小大于BASE_SIZE\*2，那么新的数组大小为ArrayMap大小的1.5倍；否则，新的数组大小为BASE_SIZE*2。
+
+```
+if (mHashes.length > (BASE_SIZE*2) && mSize < mHashes.length/3) {
+    // Shrunk enough to reduce size of arrays.  We don't allow it to
+    // shrink smaller than (BASE_SIZE*2) to avoid flapping between
+    // that and BASE_SIZE.
+    final int n = mSize > (BASE_SIZE*2) ? (mSize + (mSize>>1)) : (BASE_SIZE*2);
+
+    if (DEBUG) Log.d(TAG, "remove: shrink from " + mHashes.length + " to " + n);
+
+    final int[] ohashes = mHashes;
+    final Object[] oarray = mArray;
+    allocArrays(n);
+
+    mSize--;
+    if (index > 0) {
+        if (DEBUG) Log.d(TAG, "remove: copy from 0-" + index + " to 0");
+        System.arraycopy(ohashes, 0, mHashes, 0, index);
+        System.arraycopy(oarray, 0, mArray, 0, index << 1);
+    }
+    if (index < mSize) {
+        if (DEBUG) Log.d(TAG, "remove: copy from " + (index+1) + "-" + mSize
+                + " to " + index);
+        System.arraycopy(ohashes, index + 1, mHashes, index, mSize - index);
+        System.arraycopy(oarray, (index + 1) << 1, mArray, index << 1,
+                (mSize - index) << 1);
+    }
+}
+```
+#### 总结
+
+如果不指定capacity来创建ArrayMap对象，那么ArrayMap对象可以划分为三类：
+
++ 拥有可容纳BASE_SIZE个元素的数组
++ 拥有可容纳BASE_SIZE\*2个元素的数组
++ 援用可容纳比BASE_SIZE\*2更多的元素的数组
+
+
+### 数组缓存
+
+在使用过程中，ArrayMap可能需要多次分配内部的数组。为了避免频繁GC，ArrayMap类对释放的数组做了缓存，以便重复利用。
+
+```
+/**
+ * Caches of small array objects to avoid spamming garbage.  The cache
+ * Object[] variable is a pointer to a linked list of array objects.
+ * The first entry in the array is a pointer to the next array in the
+ * list; the second entry is a pointer to the int[] hash code array for it.
+ */
+static Object[] mBaseCache;
+static int mBaseCacheSize;
+static Object[] mTwiceBaseCache;
+static int mTwiceBaseCacheSize;
+```
+
+缓存是用链表实现的，两个缓存链表的大小上限都为CACHE_SIZE（当前实现中设定为10）。一个缓存链表用于缓存大小为BASE_SIZE的数组，另一个缓存链表用于缓存大小为BASE_SIZE\*2的数组（跟前面的数组分配策略一致）。
+
+分配数组时使用缓存的代码：
+
+```
+if (mBaseCache != null) {
+    final Object[] array = mBaseCache;
+    mArray = array;
+    mBaseCache = (Object[])array[0];
+    mHashes = (int[])array[1];
+    array[0] = array[1] = null;
+    mBaseCacheSize--;
+    if (DEBUG) Log.d(TAG, "Retrieving 1x cache " + mHashes
+            + " now have " + mBaseCacheSize + " entries");
+    return;
+}
+```
+
+释放数组时加入缓存的代码：
+
+```
+if (mBaseCacheSize < CACHE_SIZE) {
+    array[0] = mBaseCache;
+    array[1] = hashes;
+    for (int i=(size<<1)-1; i>=2; i--) {
+        array[i] = null;
+    }
+    mBaseCache = array;
+    mBaseCacheSize++;
+    if (DEBUG) Log.d(TAG, "Storing 1x cache " + array
+            + " now have " + mBaseCacheSize + " entries");
+}
+```
+
+## 点评
+
+ArrayMap是一个设计很精巧的数据结构，并且其实现代码的很多细节值得揣摩和学习（例如indexOf()方法的实现、缓存链表的实现）。
