@@ -1,5 +1,8 @@
 # Support Annotations库介绍
 
+反馈与建议，请移步：
+https://github.com/yongce/AndroidDevNotes/issues/2
+
 ### 0. 引子
 从Android Support Library v19.1开始，Support库新增了一个annotations子库，里面定义了一些annotation。这些annotation可以被用于在代码中强制添加一些调用约束，进而便于IDE对代码进行静态检查，以发现潜在的问题。
 

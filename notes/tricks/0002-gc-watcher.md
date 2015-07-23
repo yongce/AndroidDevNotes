@@ -1,5 +1,8 @@
 # GC Watcher
 
+反馈与建议，请移步：
+https://github.com/yongce/AndroidDevNotes/issues/3
+
 在看Android Framework源码时发现的一小段有意思的代码，涉及到几个有意思的知识点。
 
 代码整理如下（来自类com.android.internal.os.BinderInternal）：

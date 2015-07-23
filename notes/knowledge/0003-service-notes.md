@@ -1,5 +1,8 @@
 # Service Notes
 
+反馈与建议，请移步：
+https://github.com/yongce/AndroidDevNotes/issues/4
+
 ## Service Binding
 
 ### 关于Serivce#onBind()
