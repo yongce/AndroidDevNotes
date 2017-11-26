@@ -1,6 +1,4 @@
 # Android对Java 8的支持
-Yongce Tu <yongce.tu@gmail.com>
-v2.0, 2017-11-18
 // Settings
 ifdef::env-github[]
 :note-caption: :paperclip:
@@ -14,6 +12,7 @@ endif::[]
 :toc-placement: preamble
 :toclevels: 3
 
+'''
 文章更新历史：
 
 * 2016/8/17 文章发布（Jack版）
@@ -25,7 +24,13 @@ endif::[]
 
 ## 引子
 
-TIP: 为了便于表述，本文将使用如下缩写：a) "AS"代表Android Studio；b) "APG"代表Android Plugin for Gradle。
+[NOTE]
+====
+为了便于表述，本文将使用如下缩写：
+
+* "AS"代表Android Studio；
+* "APG"代表Android Plugin for Gradle。
+====
 
 让我们把时间拉回到2016年：随着Android N、AS 2.2和APG 2.2的发布，Android团队正式宣布支持Java8的部分语言特性和标准库。
 但当时存在一个非常大的问题，新的Jack工具链无法支持基于.class文件（Java字节码）的相关工具和库，包括AS的Instant Run功能。
