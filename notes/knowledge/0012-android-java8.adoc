@@ -17,6 +17,7 @@ endif::[]
 
 * 2016/8/17 文章发布（Jack版）
 * 2017/11/18 更新（JDK版）
+* 2020/05/30 更新（AGP 4.0 library desugaring）
 
 '''
 
@@ -28,26 +29,28 @@ endif::[]
 ====
 为了便于表述，本文将使用如下缩写：
 
-* "AS"代表Android Studio；
-* "APG"代表Android Plugin for Gradle。
+* "AS"代表Android Studio
+* "AGP"代表Android Gradle Plugin
 ====
 
-让我们把时间拉回到2016年：随着Android N、AS 2.2和APG 2.2的发布，Android团队正式宣布支持Java8的部分语言特性和标准库。
+让我们把时间拉回到2016年：随着Android N、AS 2.2和AGP 2.2的发布，Android团队正式宣布支持Java 8的部分语言特性和标准库。
 但当时存在一个非常大的问题，新的Jack工具链无法支持基于.class文件（Java字节码）的相关工具和库，包括AS的Instant Run功能。
 
-随着Android团队宣布放弃Jack工具链，以及Android O、AS 3.0和APG 3.0的发布，Android团队再次宣布对Java8的支持。
+随着Android团队宣布放弃Jack工具链，以及Android O、AS 3.0和AGP 3.0的发布，Android团队再次宣布对Java 8的支持。
 由于这次是基于JDK实现，不再存在之前Jack工具链的问题，支持的语言特性也不再有Android API的限制。
 
-请参考支持Java8的官方文档：
+随着AGP 4.0的发布，支持了Java 8 library desugaring，基本完成了对Java 8的全面支持。
+
+请参考支持Java 8的官方文档：
 https://developer.android.com/studio/write/java8-support.html 。
 
-TIP: Android团队最初的设想是用收购来的Jack工具链代替JDK，包括对Java8的支持。
+TIP: Android团队最初的设想是用收购来的Jack工具链代替JDK，包括对Java 8的支持。
 但由于诸多困难，最终还是宣布放弃Jack，重新回到JDK，见官方博客：
 https://android-developers.googleblog.com/2017/03/future-of-java-8-language-feature.html 。
 
 ## 支持的Java 8语言特性
 
-目前，支持如下Java8语言特性，并且对Androd API无限制（即可在所有设备上运行）：
+目前，支持如下Java 8语言特性，并且对Androd API无限制（即可在所有设备上运行）：
 
 * Lambda表达式
 * Method引用
@@ -277,9 +280,10 @@ https://docs.oracle.com/javase/tutorial/java/annotations/type_annotations.html
 
 ## 支持的Java 8 API
 
-Android N新增了一些Java8 API的支持（显然只能在Android N及更高版本中才可以使用）。
-虽然AS 3.0和APG 3.0重新实现了对Java8的支持（主要是语言特性这块），但Android N已经有了这些Java8 API，
-且在Android O中也没有明显变化。
+Android N新增了一些Java 8 API（即这些API只在Android N及更高版本中才可用）。
+AGP 4.0通过library desugaring技术，允许开发者在代码中使用这些API，并能够在低版本Android设备上运行
+（原理见后解释）。
+
 
 这些新增API大体可分为两部分。
 
@@ -296,7 +300,10 @@ Android N新增了一些Java8 API的支持（显然只能在Android N及更高�
 * java.util.function (函数对象)
 * java.lang.Iterable#forEach()
 
-这里关注下流式编程相关的API即可（由于短期内无法在大部分设备上运行，几乎无法在项目中使用；项目中还是只能使用RxJava等类似方案）。
+如果想在项目中使用这些Java 8 API，有两种选择：
+
+1. 如果app的minSdkVersion在Android N及更高的版本，则直接使用即可；
+2. 如果app的minSdkVersion在Android N之下，则需要使用 AGP 4.0 的『Java 8 library desugaring』特性。
 
 ### java.util.stream（流式编程）
 
@@ -359,7 +366,7 @@ class StreamDemo {
 
 ### java.util.function （函数对象）
 
-Java8抽象了很多跟function相关的API，覆盖到了常见的操作。这里看一下 java.util.function.Predicate 的实现代码即可，
+Java 8抽象了很多跟function相关的API，覆盖到了常见的操作。这里看一下 java.util.function.Predicate 的实现代码即可，
 顺便也可看到FunctionalInterface、default method、static method打配合的场景。
 
 ```java
@@ -389,9 +396,35 @@ public interface Predicate<T> {
 }
 ```
 
-## 启用Java8
+## Java 8 library desugaring
 
-要在项目中启用Java8，只需要做一点调整即可：
+AGP 4.0带来了
+https://developer.android.com/studio/releases/gradle-plugin?buildsystem=cmake#j8-library-desugaring[Java 8 library desugaring] ，
+以解决Java 8 API在低版本Android设备中缺失的问题。
+
+实现原理：
+
+1. 在APK包中携带一个额外的dex文件（如classes2.dex），包含了这些Java 8 API的实现，
+   但包名前缀由 __java.__ 变为了 __j$.__ （如 java.util.stream.Stream 变为了 j$.util.stream.Stream）。
+2. 代码中调用这些Java 8 API的地方也被相应地进行了替换。
+
+这里的技术方案，之前在Android Support Library迁移到Android X时已经被应用过（解决第三方库的兼容性问题）。
+
+也可以预见，将来Java的新API都可以通过library desugaring技术来实现支持。
+
+### 对APK包大小的影响
+
+用本文的demo项目做了简单的测试（AGP 4.0），debug版本中的Java 8 dex文件大小为900KB+，
+而启用了R8的release版本中的Java 8 dex文件大小为400KB。
+由于APK本身还会压缩，所以对APK大小的影响会更小一些。
+
+### MultiDex
+
+由于用到了MultiDex，在Android 5.0以下的设备中，可能会影响启动速度（如果之前没有使用MultiDex）。
+
+## 启用Java 8
+
+要在项目中启用Java 8，只需要做一点调整即可：
 ```java
 compileOptions {
     sourceCompatibility JavaVersion.VERSION_1_8
@@ -399,10 +432,36 @@ compileOptions {
 }
 ```
 
-最后，借用一张Android官方文档上的图来解释对Java8的支持方式：
+最后，借用一张Android官方文档上的图来解释对Java 8的支持方式：
 
 image::../../images/java_compile_with_desugar.png[width="600"]
 (原图见 https://developer.android.com/studio/images/write/desugar_2x.png)
+
+### Java 8 library desugaring
+
+贴上官方的示例配置：
+
+[source,java]
+----
+android {
+  defaultConfig {
+    // Required when setting minSdkVersion to 20 or lower
+    multiDexEnabled true
+  }
+
+  compileOptions {
+    // Flag to enable support for the new language APIs
+    coreLibraryDesugaringEnabled true
+    // Sets Java compatibility to Java 8
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+}
+
+dependencies {
+  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.5'
+}
+----
 
 ## Demo
 
